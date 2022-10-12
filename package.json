@@ -1,5 +1,5 @@
 {
-  "name": "place",
+  "name": "t3-place",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -22,6 +22,7 @@
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "superjson": "1.9.1",
+    "valtio": "^1.7.2",
     "zod": "^3.18.0"
   },
   "devDependencies": {
