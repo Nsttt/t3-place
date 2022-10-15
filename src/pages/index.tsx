@@ -1,18 +1,25 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { NextPage } from "next";
 import Head from "next/head";
+
+const MAP_SIZE = 1024;
+const CANVAS_SCALE = 3;
 
 const Home: NextPage = () => {
   const [isMovementLock, setMovementLock] = useState(true);
   const [isPlacementLock, setPlacementLock] = useState(false);
   const [isPaletteVisible, setPaletteVisible] = useState(false);
   const [isCooldown, setCooldown] = useState(false);
+  const [colorPalette, setColorPalette] = useState([]);
+  const [selectedColor, setSelectedColor] = useState("#000000");
 
   const [zoom, setZoom] = useState(5);
-  const [cursorX, setCursorX] = useState("0px");
-  const [cursorY, setCursorY] = useState("0px");
-  const [paletteX, setPaletteX] = useState("0px");
-  const [paletteY, setPaletteY] = useState("0px");
+  const [cursorX, setCursorX] = useState(0);
+  const [cursorY, setCursorY] = useState(0);
+  const [paletteX, setPaletteX] = useState(0);
+  const [paletteY, setPaletteY] = useState(0);
+  const [viewTranslateX, setViewTranslateX] = useState("0px");
+  const [viewTranslateY, setViewTranslateY] = useState("0px");
 
   const scaledCanvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -22,43 +29,46 @@ const Home: NextPage = () => {
     return Math.min(Math.max(num, min), max);
   };
 
-  window.addEventListener("mousedown", (e) => {
-    if (e.button == 1 || e.button == 2) {
-      e.preventDefault();
-    }
-    if (e.button == 0 || e.button == 1) {
-      setMovementLock(true);
-    }
-  });
-  window.addEventListener("mouseup", () => {
-    setMovementLock(false);
-  });
-  window.addEventListener("contextmenu", (e) => e.preventDefault());
-  window.addEventListener("wheel", (e) => {
-    setZoom(numberClamp(zoom + (e.deltaY < 0 ? 0.2 : -0.2), 0.3, 8));
-  });
-  window.addEventListener("mousemove", (e) => {
-    requestAnimationFrame(() => {
-      setCursorX(`${Math.floor(e.clientX)}px`);
-      setCursorY(`${Math.floor(e.clientY)}px`);
-    });
-  });
-
-  if (scaled_canvas) {
-    scaled_canvas.addEventListener("mousedown", (e) => {
-      if (e.button == 0) {
-        // Prevent placement if palette was open
-        setPlacementLock(!isPaletteVisible);
-        setPaletteVisible(false);
-      } else if (e.button == 1) {
-        setPaletteVisible(false);
-      } else if (e.button == 2) {
-        setPaletteVisible(!isPaletteVisible);
-        setPaletteX(cursorX);
-        setPaletteY(cursorY);
+  useEffect(() => {
+    window.addEventListener("mousedown", (e) => {
+      if (e.button == 1 || e.button == 2) {
+        e.preventDefault();
+      }
+      if (e.button == 0 || e.button == 1) {
+        setMovementLock(true);
       }
     });
-  }
+    window.addEventListener("mouseup", () => {
+      setMovementLock(false);
+    });
+    window.addEventListener("contextmenu", (e) => e.preventDefault());
+    window.addEventListener("wheel", (e) => {
+      setZoom(numberClamp(zoom + (e.deltaY < 0 ? 0.2 : -0.2), 0.3, 8));
+    });
+    window.addEventListener("mousemove", (e) => {
+      requestAnimationFrame(() => {
+        setCursorX(Math.floor(e.clientX));
+        setCursorY(Math.floor(e.clientY));
+      });
+    });
+
+    if (scaled_canvas) {
+      scaled_canvas.addEventListener("mousedown", (e) => {
+        if (e.button == 0) {
+          // Prevent placement if palette was open
+          setPlacementLock(!isPaletteVisible);
+          setPaletteVisible(false);
+        } else if (e.button == 1) {
+          setPaletteVisible(false);
+        } else if (e.button == 2) {
+          setPaletteVisible(!isPaletteVisible);
+          setPaletteX(cursorX);
+          setPaletteY(cursorY);
+        }
+      });
+    }
+  }, [cursorX, cursorY, isPaletteVisible, scaled_canvas, zoom]);
+
   return (
     <>
       <Head>
@@ -67,7 +77,37 @@ const Home: NextPage = () => {
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <main className="container flex flex-col items-center justify-center min-h-screen p-4 mx-auto">
-        <canvas ref={scaledCanvasRef} />
+        <canvas
+          ref={scaledCanvasRef}
+          className={`border-2 trnsform scale-${zoom} translate-x-${viewTranslateX} translate-y-${viewTranslateY}`}
+          width={MAP_SIZE * CANVAS_SCALE}
+          height={MAP_SIZE * CANVAS_SCALE}
+        />
+        {isPaletteVisible && (
+          <div className="palette__container">
+            {colorPalette.map((color) => (
+              <div
+                key={color}
+                // style={`background-color: rgb(${color[1].join()});`}
+                className={`
+          border-2 ${color == "#000000"}
+          border-4 border-white border-opacity-60' ${selectedColor == color}
+        `}
+                onClick={() => {
+                  setSelectedColor("");
+                  setPaletteVisible(false);
+                }}
+              />
+            ))}
+          </div>
+        )}
+
+        <div className="fixed top-6 lg:top-12 left-1/2 -translate-x-1/2 z-10 w-36 lg:w-44 h-10 lg:h-14 bg-white border rounded-full shadow-xl flex justify-center items-center lg:gap-1 lg:text-xl font-medium">
+          <span>X:</span>
+          <span>{cursorX}</span>
+          <span className="ml-4">Y:</span>
+          <span>{cursorY}</span>
+        </div>
       </main>
     </>
   );
